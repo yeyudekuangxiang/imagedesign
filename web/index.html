@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        @font-face {
+            font-family: myFirstFont;
+            src: url(https://cdn.laoyaojing.net/standard/resource/siyuanheiti.ttf),
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .draw {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .text {
+            cursor: pointer;
+            user-select: none;
+            position: absolute;
+        }
+
+        .tool {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: baseline;
+            justify-content: right;
+            right: 0;
+            top: 0;
+            width: 350px;
+            height: 100%;
+        }
+
+        .create-canvas {
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+
+        .text-control {
+            background-color: white;
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 350px;
+            height: 100%;
+        }
+
+        .text-control .el-form-item {
+            margin-bottom: 2px;
+        }
+
+        .text-control .el-input-group__prepend {
+            padding: 0 5px;
+        }
+        [v-cloak]{
+            display: none
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+</head>
+<body>
+<div id="app" v-cloak>
+    <div class="draw" id="draw">
+        <div v-show="showCanvas" class="canvas" id="canvas"
+             style="position: relative;user-select: none;border: 4px black solid">
+            <div class="help">
+                <div v-show="editing!==''" style="height: 1px;background-color: black;position: absolute;z-index: 1000;"
+                     id="line1"></div>
+                <div v-show="editing!==''" style=";width: 1px;background-color: black;position: absolute;z-index: 1000;"
+                     id="line2"></div>
+                <div v-show="editing!==''"
+                     style="height: 1px;;background-color: black;position: absolute;z-index: 1000;"
+                     id="line3"></div>
+                <div v-show="editing!==''" style="width: 1px;background-color: black;position: absolute;z-index: 1000;"
+                     id="line4"></div>
+                <div v-show="editing!==''" id="left" style="position:absolute;z-index: 1000;color: black"></div>
+                <div v-show="editing!==''" id="top" style="position: absolute;z-index: 1000;color: black"></div>
+                <div v-show="editing!==''" id="width" style="position:absolute;z-index: 1000;color: black"></div>
+                <div v-show="editing!==''" id="height" style="position:absolute;z-index: 1000;color: black"></div>
+                <div id="area"
+                     v-show="editing!==''"
+                     style="position: absolute;border-bottom: 10px solid black;border-right: 10px solid black;height: 20px;width: 20px;cursor: pointer;user-select: none;"
+                     @mousedown="areaMousedown"></div>
+            </div>
+            <div id="content">
+
+            </div>
+        </div>
+    </div>
+    <div class="create-canvas">
+        <el-button v-if="!showCanvas" @click="dialogFormVisible = true">创建画布</el-button>
+        <el-dialog title="创建画布" :visible.sync="dialogFormVisible">
+            <el-form>
+                <el-form-item label="画布宽度" label-width="90px">
+                    <el-input v-model.number="canvas.width" autocomplete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="画布高度" label-width="90px">
+                    <el-input v-model.number="canvas.height" autocomplete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="画布背景图" label-width="90px">
+                    <el-input v-model.number="canvas.src" autocomplete="off"></el-input>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="dialogFormVisible = false">取 消</el-button>
+                <el-button type="primary" @click="createCanvas">确 定</el-button>
+            </div>
+        </el-dialog>
+    </div>
+    <div class="tool" v-show="editing==='' && showCanvas" style="background-color: white">
+        <div style="display: flex;flex-direction: row;">
+            <el-button @click="addText">文本</el-button>
+            <el-button @click="addImage">图片</el-button>
+            <el-button @click="showCode">代码</el-button>
+        </div>
+        <div v-show="showCodeVal" style="flex-grow: 1;width: 100%">
+            <el-input
+                    type="textarea"
+                    :rows="50"
+                    placeholder="请输入内容"
+                    v-model="code">
+            </el-input>
+        </div>
+    </div>
+    <div id="text-control" v-if="showControl('text')" class="text-control">
+        <el-form ref=form label-width=120px>
+            <el-form-item label="文本内容">
+                <el-input v-model="textControl.content" placeholder="请输入内容 自定义分行请用隔开"></el-input>
+            </el-form-item>
+            <el-form-item label="字体大小(px)">
+                <el-input placeholder="请输入字体大小" type="number" min=1 v-model.number="textControl.fontSize">
+                </el-input>
+            </el-form-item>
+            <el-form-item label="行高">
+                <el-input placeholder="请输入行高" type="number" min=1 v-model.number="textControl.lineHeight">
+                </el-input>
+            </el-form-item>
+            <el-form-item label="最大行数">
+                <el-input placeholder="请输入最大行数" type="number" min=1 v-model.number="textControl.maxLineNum">
+                </el-input>
+            </el-form-item>
+            <el-form-item label="省略符">
+                <el-input placeholder="请输入超出省略符" v-model="textControl.outStr">
+                </el-input>
+            </el-form-item>
+            <el-form-item label="超出略位置">
+                <el-select v-model="textControl.outStrPosition" placeholder="请选择超出略位置" style="width: 100%">
+                    <el-option
+                            v-for="(item,i) in outStrPositionOptions"
+                            :key="i"
+                            :label="item.label"
+                            :value="item.value">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+
+            <el-form-item label="是否自动分行">
+                <el-select v-model="textControl.autoLine" placeholder="请选择是否自动分行" style="width: 100%">
+                    <el-option
+                            v-for="(item,i) in autoLineOptions"
+                            :key="i"
+                            :label="item.label"
+                            :value="item.value">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="行超出是否隐藏">
+                <el-select v-model="textControl.overHidden" placeholder="请选择行超出区域是否隐藏" style="width: 100%">
+                    <el-option
+                            v-for="(item,i) in overHiddenOptions"
+                            :key="i"
+                            :label="item.label"
+                            :value="item.value">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="文字颜色(rgba)">
+                <div style="display: flex;flex-direction: row">
+                    <el-input
+                            v-model.number="textControl.color.r"
+                            max=255
+                            min=0
+                    >
+                        <template slot=prepend>R</template>
+                    </el-input>
+                    <el-input
+                            v-model.number="textControl.color.g"
+                            max=255
+                            min=0
+                    >
+                        <template slot=prepend>G</template>
+                    </el-input>
+                </div>
+            </el-form-item>
+            <el-form-item>
+                <div style="display: flex;flex-direction: row">
+                    <el-input
+                            v-model.number="textControl.color.b"
+                            max=255
+                            min=0
+                    >
+                        <template slot=prepend>B</template>
+                    </el-input>
+                    <el-input
+                            v-model.number="textControl.color.a"
+                            max=255
+                            min=0
+                    >
+                        <template slot=prepend>A</template>
+                    </el-input>
+                </div>
+            </el-form-item>
+            <el-form-item label="起始位置">
+                <div style="display: flex;flex-direction: row">
+                    <el-input
+                            v-model.number="textControl.area.x"
+                            max=255
+                            min=0
+                    >
+                        <template slot=prepend>X</template>
+                    </el-input>
+                    <el-input
+                            v-model.number="textControl.area.y"
+                            max=255
+                            min=0
+                    >
+                        <template slot=prepend>Y</template>
+                    </el-input>
+                </div>
+            </el-form-item>
+
+            <el-form-item label="宽高">
+                <div style="display: flex;flex-direction: row">
+                    <el-input
+                            v-model.number="textControl.area.w"
+                            max=255
+                            min=0
+                    >
+                        <template slot=prepend>W</template>
+                    </el-input>
+                    <el-input
+                            v-model.number="textControl.area.h"
+                            max=255
+                            min=0
+                    >
+                        <template slot=prepend>H</template>
+                    </el-input>
+                </div>
+
+            </el-form-item>
+            <el-form-item label="对齐方式">
+                <el-select v-model="textControl.textAlign" placeholder="请选择对齐方式" style="width: 100%">
+                    <el-option
+                            v-for="(item,i) in textAlignOptions"
+                            :key="i"
+                            :label="item.label"
+                            :value="item.value">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item>
+                <el-button @click=deal>确定</el-button>
+                <el-button type="danger" @click="delEle">删除</el-button>
+            </el-form-item>
+        </el-form>
+    </div>
+    <div id="image-control" v-if="showControl('image')" class="text-control">
+        <el-form ref=form label-width=120px>
+            <el-form-item label="图片地址">
+                <el-input v-model="textControl.src" placeholder="请输入图片地址"></el-input>
+            </el-form-item>
+
+            <el-form-item label="起始位置">
+                <div style="display: flex;flex-direction: row">
+                    <el-input
+                            v-model.number="textControl.area.x"
+                            max=255
+                            min=0
+                    >
+                        <template slot=prepend>X</template>
+                    </el-input>
+                    <el-input
+                            v-model.number="textControl.area.y"
+                            max=255
+                            min=0
+                    >
+                        <template slot=prepend>Y</template>
+                    </el-input>
+                </div>
+            </el-form-item>
+
+            <el-form-item label="宽高">
+                <div style="display: flex;flex-direction: row">
+                    <el-input
+                            v-model.number="textControl.area.w"
+                            max=255
+                            min=0
+                    >
+                        <template slot=prepend>W</template>
+                    </el-input>
+                    <el-input
+                            v-model.number="textControl.area.h"
+                            max=255
+                            min=0
+                    >
+                        <template slot=prepend>H</template>
+                    </el-input>
+                </div>
+
+            </el-form-item>
+            <el-form-item label="类型">
+                <el-select v-model="textControl.shape" placeholder="请选择类型" style="width: 100%">
+                    <el-option
+                            v-for="(item,i) in imageOptions"
+                            :key="i"
+                            :label="item.label"
+                            :value="item.value">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item>
+                <el-button @click=deal>确定</el-button>
+                <el-button type="danger" @click="delEle">删除</el-button>
+            </el-form-item>
+        </el-form>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/axios/0.21.1/axios.min.js"></script>
+<script src="https://cdn.bootcss.com/qs/6.7.0/qs.min.js"></script>
+<script>
+    const qs = Qs
+    new Vue({
+        el: "#app",
+        data: {
+            code: "",
+            showCodeVal: false,
+            dialogFormVisible: false,
+            imageOptions: [
+                {
+                    value: "square",
+                    label: "方形"
+                },
+                {
+                    value: "cycle",
+                    label: "圆形"
+                },
+            ],
+            autoLineOptions: [
+                {
+                    value: true,
+                    label: "分行"
+                },
+                {
+                    value: false,
+                    label: "不分行"
+                },
+            ],
+            overHiddenOptions: [
+                {
+                    value: true,
+                    label: "隐藏"
+                },
+                {
+                    value: false,
+                    label: "不隐藏"
+                },
+            ],
+            outStrPositionOptions: [
+                {
+                    value: "left",
+                    label: "左"
+                },
+                {
+                    value: "right",
+                    label: "右"
+                },
+            ],
+            textAlignOptions: [
+                {
+                    value: "left",
+                    label: "左对齐"
+                },
+                {
+                    value: "center",
+                    label: "居中对齐"
+                },
+                {
+                    value: "right",
+                    label: "右对齐"
+                },
+            ],
+            showCanvas: false,
+            canvas: {
+                width: 300,
+                height: 500,
+                src: "",
+            },
+            editing: "",
+            object: {},
+            textControl: null,
+        },
+        methods: {
+            createCanvas: function () {
+                document.getElementById("canvas").style.height = this.canvas.height + "px"
+                document.getElementById("canvas").style.width = this.canvas.width + "px"
+                if (this.canvas.src) {
+                    document.getElementById("canvas").style.background = "url(" + this.canvas.src + ") 100% 100%"
+                }
+                document.getElementById("content").innerHTML = ""
+                this.showCanvas = true
+                this.dialogFormVisible = false
+            },
+            showCode:function (){
+                this.showCodeVal = !this.showCodeVal
+                if (this.showCodeVal === false) {
+                    return
+                }
+                this.createCode()
+            },
+            createCode: function () {
+                let arr = []
+                for (let k in this.object) {
+                    arr.push(this.object[k])
+                }
+                let that = this
+                axios.post("/api/code", JSON.stringify({
+                    canvas: this.canvas,
+                    object: arr
+                }), {
+                    headers: {"content-type": "application/json"}
+                }).then(res => {
+                    if (res.status === 200 && res.data.code === 200) {
+                        that.code = res.data.data.code
+                    } else {
+                        that.$message.error(res.data.message || res.status);
+                    }
+                }).catch(e => {
+                    that.$message.error(e);
+                })
+            },
+            showControl: function (type) {
+                if (!this.editing || !this.object[this.editing]) {
+                    return false
+                }
+                return this.object[this.editing]["type"] === type
+            },
+            addText: function () {
+                let that = this
+                let id = new Date().getTime() + ""
+                let ele = document.createElement("div")
+                ele.id = id
+                ele.className = "text "
+                ele.onmousedown = function (e) {
+                    that.mousedown.call(that, e, id)
+                }
+
+                this.editing = id
+                this.textControl = this.object[id] = {
+                    id: id,
+                    type: "text",
+                    content: "文本",
+                    fontSize: 20,
+                    textAlign: "left",
+                    area: {
+                        x: 0,
+                        y: 0,
+                        w: 80,
+                        h: 50
+                    },
+                    maxLineNum: 5,
+                    outStr: "...",
+                    outStrPosition: "right",
+                    font: "",
+                    lineHeight: 30,
+                    color: {r: 0, g: 0, b: 0, a: 255},
+                    autoLine: true,
+                    overHidden: true,
+                }
+                document.getElementById("content").appendChild(ele)
+                this.deal()
+            },
+            addImage: function () {
+                let that = this
+                let id = new Date().getTime() + ""
+                let ele = document.createElement("img")
+                ele.id = id
+                ele.className = "text  "
+                ele.draggable = false
+                ele.onmousedown = function (e) {
+                    that.mousedown.call(that, e, id)
+                }
+
+                this.editing = id
+
+                this.textControl = this.object[id] = {
+                    id: id,
+                    type: "image",
+                    shape: "square",
+                    src: "",
+                    op: 0,
+                    area: {
+                        x: 0,
+                        y: 0,
+                        w: 100,
+                        h: 100
+                    },
+                }
+                document.getElementById("content").appendChild(ele)
+                this.deal()
+            },
+            delEle:function (){
+                this.$confirm('确定删除?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    Vue.delete(this.object,this.editing)
+                    document.getElementById("content").removeChild(document.getElementById(this.editing))
+                    this.editing = ""
+                    this.deal()
+                    this.$message({
+                        type: 'success',
+                        message: '删除成功!'
+                    });
+                }).catch((e) => {
+                    console.log(e)
+                    this.$message({
+                        type: 'info',
+                        message: '已取消删除'
+                    });
+                });
+            },
+            deal: function () {
+                this.updateLineInfo()
+                if (this.editing && this.object[this.editing]['type'] === 'text') {
+                    this.showText()
+                }
+                this.createCode()
+            },
+            areaMousedown: function (e) {
+                let id = this.editing
+                let startX = e.screenX
+                let startY = e.screenY
+                let that = this
+
+                document.getElementById("canvas").onmousemove = function (e) {
+                    let moveX = e.screenX - startX
+                    let moveY = e.screenY - startY
+
+                    let width = document.getElementById(id).offsetWidth
+                    let height = document.getElementById(id).offsetHeight
+                    let left = parseInt(document.getElementById(id).style.left)
+                    let top = parseInt(document.getElementById(id).style.top)
+
+
+                    if (moveX + width < 0) {
+                        width = 0
+                    } else if (moveX + width + left > that.canvas.width) {
+                        width = that.canvas.width - left
+                    } else {
+                        width = moveX + width
+                    }
+
+                    if (moveY + height < 0) {
+                        height = 0
+                    } else if (moveY + height + top > that.canvas.height) {
+                        height = that.canvas.height - top
+                    } else {
+                        height = moveY + height
+                    }
+
+                    let width2 = width
+                    let height2 = height
+
+
+                    that.object[id].area.w = width2
+                    that.object[id].area.h = height2
+
+                    that.updateLineInfo()
+
+                    startX = e.screenX
+                    startY = e.screenY
+                }
+
+                document.getElementById("canvas").onmouseleave = function () {
+                    that.deal()
+                    document.getElementById("canvas").onmousemove = function () {
+                    }
+                    document.getElementById("canvas").onmouseleave = function () {
+                    }
+                    document.body.onmouseup = function () {
+                    }
+                }
+                document.body.onmouseup = function () {
+                    that.deal()
+                    document.getElementById("canvas").onmousemove = function () {
+                    }
+                    document.getElementById("canvas").onmouseleave = function () {
+                    }
+                    document.body.onmouseup = function () {
+                    }
+                }
+
+            },
+            mousedown: function (e, id) {
+                this.editing = id
+                document.getElementById(id).className = "text"
+                this.textControl = this.object[id]
+                this.updateLineInfo()
+
+                let that = this
+                //拖动元素显示和隐藏
+                document.body.onkeydown = function (e) {
+                    switch (e.code) {
+                        case "Enter":
+                            //document.getElementById("area").style.display = "none"
+                            document.getElementById(id).className = "text"
+                            document.body.onkeydown = function () {
+                            }
+                            that.deal()
+                            that.editing = ""
+                            e.preventDefault()
+                            break;
+                        case "ArrowLeft":
+                            if (that.object[id].area.x > 0) {
+                                that.object[id].area.x -= 1
+                                that.updateLineInfo()
+                            }
+                            e.preventDefault()
+                            break;
+                        case "ArrowUp":
+                            if (that.object[id].area.y > 0) {
+                                that.object[id].area.y -= 1
+                                that.updateLineInfo()
+                            }
+                            e.preventDefault()
+                            break;
+                        case "ArrowRight":
+                            if (that.object[id].area.x + that.object[id].area.w < that.canvas.width) {
+                                that.object[id].area.x += 1
+                                that.updateLineInfo()
+                            }
+                            e.preventDefault()
+                            break;
+                        case "ArrowDown":
+                            if (that.object[id].area.y + that.object[id].area.h < that.canvas.height) {
+                                that.object[id].area.y += 1
+                                that.updateLineInfo()
+                            }
+                            e.preventDefault()
+                            break;
+                    }
+
+                }
+
+                let startX = e.screenX
+                let startY = e.screenY
+
+                let width = document.getElementById(id).offsetWidth
+                let height = document.getElementById(id).offsetHeight
+
+                document.getElementById("canvas").onmousemove = function (e) {
+                    let left = parseInt(document.getElementById(id).style.left)
+                    let top = parseInt(document.getElementById(id).style.top)
+
+                    let moveX = e.screenX - startX
+                    let moveY = e.screenY - startY
+
+                    if (left + moveX < 0) {
+                        left = 0
+                    } else if (left + moveX + width >= that.canvas.width) {
+                        left = that.canvas.width - width
+                    } else {
+                        left = left + moveX
+                    }
+
+                    if (top + moveY < 0) {
+                        top = 0
+                    } else if (top + moveY + height >= that.canvas.height) {
+                        top = that.canvas.height - height
+                    } else {
+                        top = top + moveY
+                    }
+                    startX = e.screenX
+                    startY = e.screenY
+
+                    that.object[id].area.x = left
+                    that.object[id].area.y = top
+
+                    that.updateLineInfo()
+
+                }
+                document.getElementById("canvas").onmouseleave = function () {
+                    document.getElementById("canvas").onmousemove = function () {
+                    }
+                    document.getElementById("canvas").onmouseleave = function () {
+                    }
+                    document.body.onmouseup = function () {
+                    }
+                }
+                document.body.onmouseup = function () {
+                    document.getElementById("canvas").onmousemove = function () {
+                    }
+                    document.getElementById("canvas").onmouseleave = function () {
+                    }
+                    document.body.onmouseup = function () {
+                    }
+                }
+            },
+            updateLineInfo: function () {
+
+                let id = this.editing
+                let data = this.object[this.editing]
+                if (id === '') {
+                    return
+                }
+                //更新区域距离左边长度显示
+                document.getElementById("left").innerText = data.area.x + "px"
+                document.getElementById("left").style.left = (data.area.x - document.getElementById("left").offsetWidth) / 2 + "px"
+                document.getElementById("left").style.top = data.area.y + "px"
+
+                //更新区域距离顶部长度显示
+                document.getElementById("top").innerText = data.area.y + "px"
+                document.getElementById("top").style.top = (data.area.y - document.getElementById("top").offsetHeight) / 2 + "px"
+                document.getElementById("top").style.left = data.area.x + "px"
+
+                //更新区域长度显示
+                document.getElementById("width").innerText = data.area.w + "px"
+                document.getElementById("width").style.left = (data.area.x + (data.area.w - document.getElementById("width").offsetWidth) / 2) + "px"
+                document.getElementById("width").style.top = (data.area.y - document.getElementById("width").offsetHeight) + "px"
+
+                //更新区域宽度显示
+                document.getElementById("height").innerText = data.area.h + "px"
+                document.getElementById("height").style.top = (data.area.y + (data.area.h - document.getElementById("height").offsetHeight) / 2) + "px"
+                console.log(document.getElementById("height").offsetWidth)
+                document.getElementById("height").style.left = (data.area.x - document.getElementById("height").offsetWidth) + "px"
+
+                //更新两条线位置
+                document.getElementById("line1").style.top = data.area.y + "px"
+                document.getElementById("line1").style.width = this.canvas.width + "px"
+                document.getElementById("line2").style.left = data.area.x + "px"
+                document.getElementById("line2").style.height = this.canvas.height + "px"
+
+                document.getElementById("line3").style.top = (data.area.y + data.area.h) + "px"
+                document.getElementById("line3").style.left = data.area.x + "px"
+                document.getElementById("line3").style.width = data.area.w + "px"
+
+                document.getElementById("line4").style.top = data.area.y + "px"
+                document.getElementById("line4").style.left = (data.area.x + data.area.w) + "px"
+                document.getElementById("line4").style.height = data.area.h + "px"
+                //更新拖动大小元素位置
+                document.getElementById("area").style.left = (data.area.w + data.area.x - 20) + "px"
+                document.getElementById("area").style.top = (data.area.h + data.area.y - 20) + "px"
+
+                for (let k in data) {
+                    switch (k) {
+                        case "color":
+                            let a = data[k].a / 255
+                            document.getElementById(id).style.color = "rgba(" + data[k].r + "," + data[k].g + "," + data[k].b + "," + a + ")"
+                            break;
+                        case "fontSize":
+                            document.getElementById(id).style.fontSize = data[k] + "px"
+                            break;
+                        case "textAlign":
+                            document.getElementById(id).style.textAlign = data[k]
+                            break;
+                        case "area":
+                            document.getElementById(id).style.left = data[k].x + "px"
+                            document.getElementById(id).style.top = data[k].y + "px"
+                            document.getElementById(id).style.width = data[k].w + "px"
+                            document.getElementById(id).style.height = data[k].h + "px"
+                            break;
+                        case "src":
+                            document.getElementById(id).src = data[k]
+                            break;
+                        case "shape":
+                            if (data['type'] === "text") {
+                                continue
+                            }
+                            if (data[k] === "cycle") {
+                                document.getElementById(id).style.borderRadius = "50%"
+                            } else if (data[k] === "square") {
+                                document.getElementById(id).style.borderRadius = "0"
+                            }
+                    }
+                }
+            },
+            showText: function () {
+                let id = this.editing
+                let data = this.object[this.editing]
+
+                this.getTextLine(data).then((result => {
+                    document.getElementById(id).innerHTML = ""
+                    result.texts.forEach(text => {
+                        let div = document.createElement("div")
+                        div.innerText = text.Str
+                        div.style.lineHeight = result.lineHeight + "px"
+                        div.style.fontFamily = "myFirstFont"
+                        document.getElementById(id).appendChild(div)
+                    })
+                }))
+            },
+            getTextLine: function (text) {
+                return axios.post("/api/text", JSON.stringify(text), {
+                    headers: {"content-type": "application/json"}
+                }).then(res => {
+                    if (res.status === 200 && res.data.code === 200) {
+                        return res.data.data
+                    }
+                    return []
+                }).catch(e => {
+                    return Promise.reject(e)
+                })
+            },
+        }
+    })
+</script>
+</body>
+</html>
