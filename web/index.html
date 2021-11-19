@@ -148,26 +148,26 @@
     <div id="text-control" v-if="showControl('text')" class="text-control">
         <el-form ref=form label-width=120px>
             <el-form-item label="文本内容">
-                <el-input v-model="textControl.content" placeholder="请输入内容 自定义分行请用隔开"></el-input>
+                <el-input v-model="textControl.content" @blur="deal" placeholder="请输入内容 自定义分行请用隔开"></el-input>
             </el-form-item>
             <el-form-item label="字体大小(px)">
-                <el-input placeholder="请输入字体大小" type="number" min=1 v-model.number="textControl.fontSize">
+                <el-input placeholder="请输入字体大小" type="number" @blur="deal" min=1 v-model.number="textControl.fontSize">
                 </el-input>
             </el-form-item>
             <el-form-item label="行高">
-                <el-input placeholder="请输入行高" type="number" min=1 v-model.number="textControl.lineHeight">
+                <el-input placeholder="请输入行高" type="number" @blur="deal" min=1 v-model.number="textControl.lineHeight">
                 </el-input>
             </el-form-item>
             <el-form-item label="最大行数">
-                <el-input placeholder="请输入最大行数" type="number" min=1 v-model.number="textControl.maxLineNum">
+                <el-input placeholder="请输入最大行数" @blur="deal" type="number" min=1 v-model.number="textControl.maxLineNum">
                 </el-input>
             </el-form-item>
             <el-form-item label="省略符">
-                <el-input placeholder="请输入超出省略符" v-model="textControl.outStr">
+                <el-input placeholder="请输入超出省略符"  @blur="deal" v-model="textControl.outStr">
                 </el-input>
             </el-form-item>
             <el-form-item label="超出略位置">
-                <el-select v-model="textControl.outStrPosition" placeholder="请选择超出略位置" style="width: 100%">
+                <el-select v-model="textControl.outStrPosition"  @change="deal" placeholder="请选择超出略位置" style="width: 100%">
                     <el-option
                             v-for="(item,i) in outStrPositionOptions"
                             :key="i"
@@ -178,7 +178,7 @@
             </el-form-item>
 
             <el-form-item label="是否自动分行">
-                <el-select v-model="textControl.autoLine" placeholder="请选择是否自动分行" style="width: 100%">
+                <el-select v-model="textControl.autoLine"  @change="deal" placeholder="请选择是否自动分行" style="width: 100%">
                     <el-option
                             v-for="(item,i) in autoLineOptions"
                             :key="i"
@@ -188,7 +188,7 @@
                 </el-select>
             </el-form-item>
             <el-form-item label="行超出是否隐藏">
-                <el-select v-model="textControl.overHidden" placeholder="请选择行超出区域是否隐藏" style="width: 100%">
+                <el-select v-model="textControl.overHidden"  @change="deal" placeholder="请选择行超出区域是否隐藏" style="width: 100%">
                     <el-option
                             v-for="(item,i) in overHiddenOptions"
                             :key="i"
@@ -200,6 +200,7 @@
             <el-form-item label="文字颜色(rgba)">
                 <div style="display: flex;flex-direction: row">
                     <el-input
+                            @blur="deal"
                             v-model.number="textControl.color.r"
                             max=255
                             min=0
@@ -207,6 +208,7 @@
                         <template slot=prepend>R</template>
                     </el-input>
                     <el-input
+                            @blur="deal"
                             v-model.number="textControl.color.g"
                             max=255
                             min=0
@@ -218,6 +220,7 @@
             <el-form-item>
                 <div style="display: flex;flex-direction: row">
                     <el-input
+                            @blur="deal"
                             v-model.number="textControl.color.b"
                             max=255
                             min=0
@@ -225,6 +228,7 @@
                         <template slot=prepend>B</template>
                     </el-input>
                     <el-input
+                            @blur="deal"
                             v-model.number="textControl.color.a"
                             max=255
                             min=0
@@ -236,6 +240,7 @@
             <el-form-item label="起始位置">
                 <div style="display: flex;flex-direction: row">
                     <el-input
+                            @blur="deal"
                             v-model.number="textControl.area.x"
                             max=255
                             min=0
@@ -243,6 +248,7 @@
                         <template slot=prepend>X</template>
                     </el-input>
                     <el-input
+                            @blur="deal"
                             v-model.number="textControl.area.y"
                             max=255
                             min=0
@@ -255,6 +261,7 @@
             <el-form-item label="宽高">
                 <div style="display: flex;flex-direction: row">
                     <el-input
+                            @blur="deal"
                             v-model.number="textControl.area.w"
                             max=255
                             min=0
@@ -262,6 +269,7 @@
                         <template slot=prepend>W</template>
                     </el-input>
                     <el-input
+                            @blur="deal"
                             v-model.number="textControl.area.h"
                             max=255
                             min=0
@@ -272,7 +280,7 @@
 
             </el-form-item>
             <el-form-item label="对齐方式">
-                <el-select v-model="textControl.textAlign" placeholder="请选择对齐方式" style="width: 100%">
+                <el-select v-model="textControl.textAlign"  @change="deal" placeholder="请选择对齐方式" style="width: 100%">
                     <el-option
                             v-for="(item,i) in textAlignOptions"
                             :key="i"
@@ -282,7 +290,7 @@
                 </el-select>
             </el-form-item>
             <el-form-item>
-                <el-button @click=deal>确定</el-button>
+                <el-button @click="endEdit">确定</el-button>
                 <el-button type="danger" @click="delEle">删除</el-button>
             </el-form-item>
         </el-form>
@@ -290,12 +298,13 @@
     <div id="image-control" v-if="showControl('image')" class="text-control">
         <el-form ref=form label-width=120px>
             <el-form-item label="图片地址">
-                <el-input v-model="textControl.src" placeholder="请输入图片地址"></el-input>
+                <el-input v-model="textControl.src" @blur="deal"  placeholder="请输入图片地址"></el-input>
             </el-form-item>
 
             <el-form-item label="起始位置">
                 <div style="display: flex;flex-direction: row">
                     <el-input
+                            @blur="deal"
                             v-model.number="textControl.area.x"
                             max=255
                             min=0
@@ -303,6 +312,7 @@
                         <template slot=prepend>X</template>
                     </el-input>
                     <el-input
+                            @blur="deal"
                             v-model.number="textControl.area.y"
                             max=255
                             min=0
@@ -315,6 +325,7 @@
             <el-form-item label="宽高">
                 <div style="display: flex;flex-direction: row">
                     <el-input
+                            @blur="deal"
                             v-model.number="textControl.area.w"
                             max=255
                             min=0
@@ -322,6 +333,7 @@
                         <template slot=prepend>W</template>
                     </el-input>
                     <el-input
+                            @blur="deal"
                             v-model.number="textControl.area.h"
                             max=255
                             min=0
@@ -332,7 +344,7 @@
 
             </el-form-item>
             <el-form-item label="类型">
-                <el-select v-model="textControl.shape" placeholder="请选择类型" style="width: 100%">
+                <el-select v-model="textControl.shape" @change="deal" placeholder="请选择类型" style="width: 100%">
                     <el-option
                             v-for="(item,i) in imageOptions"
                             :key="i"
@@ -342,7 +354,7 @@
                 </el-select>
             </el-form-item>
             <el-form-item>
-                <el-button @click=deal>确定</el-button>
+                <el-button @click="endEdit">确定</el-button>
                 <el-button type="danger" @click="delEle">删除</el-button>
             </el-form-item>
         </el-form>
@@ -562,6 +574,13 @@
                 }
                 this.createCode()
             },
+            endEdit:function (){
+                if (this.editing){
+                    document.getElementById(this.editing).className = "text"
+                    this.deal()
+                    this.editing = ""
+                }
+            },
             areaMousedown: function (e) {
                 let id = this.editing
                 let startX = e.screenX
@@ -639,12 +658,12 @@
                     switch (e.code) {
                         case "Enter":
                             //document.getElementById("area").style.display = "none"
-                            document.getElementById(id).className = "text"
+
                             document.body.onkeydown = function () {
                             }
-                            that.deal()
-                            that.editing = ""
                             e.preventDefault()
+                            that.endEdit()
+
                             break;
                         case "ArrowLeft":
                             if (that.object[id].area.x > 0) {
@@ -757,7 +776,6 @@
                 //更新区域宽度显示
                 document.getElementById("height").innerText = data.area.h + "px"
                 document.getElementById("height").style.top = (data.area.y + (data.area.h - document.getElementById("height").offsetHeight) / 2) + "px"
-                console.log(document.getElementById("height").offsetWidth)
                 document.getElementById("height").style.left = (data.area.x - document.getElementById("height").offsetWidth) + "px"
 
                 //更新两条线位置

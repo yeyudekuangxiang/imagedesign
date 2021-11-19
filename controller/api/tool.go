@@ -65,7 +65,6 @@ func GetText(c *gin.Context) (gin.H, error) {
 	if err := util.BindForm(c, &text); err != nil {
 		return nil, err
 	}
-	fmt.Printf("%+v\n", text)
 	var t *imagedraw.Text
 	if strings.Contains(text.Content, "\n") {
 		t = imagedraw.NewLineText(strings.Split(text.Content, "\n"))
