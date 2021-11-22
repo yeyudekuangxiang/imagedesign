@@ -17,4 +17,4 @@ if [ -z "$(kubectl get deployment ${container_name} 2>/dev/null)" ]; then
   echo "deployment \"${container_name}\"  not exists. prepare for create"
   kubectl apply -f ${deploy_file} --validate=false
 fi
-kubectl patch deployment ${container_name} -p '{"spec":{"template":{"spec":{"containers":[{"name":"'${container_name}'","image": "registry.cn-hangzhou.aliyuncs.com/branch/imagedesign:'${1}'","env":[{"name":"RESTART_TIME","value":"'$(date +%s)'"}]}]}}}}'
+kubectl patch deployment ${container_name} -p '{"spec":{"template":{"spec":{"containers":[{"name":"'${container_name}'","image": "registry.cn-hangzhou.aliyuncs.com/jzl/imagedesign:'${1}'","env":[{"name":"RESTART_TIME","value":"'$(date +%s)'"}]}]}}}}'

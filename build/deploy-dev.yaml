@@ -20,7 +20,7 @@ spec:
         app: imagedesign-dev
     spec:
       containers:
-        - image: 'registry.cn-hangzhou.aliyuncs.com/branch/imagedesign:develop'
+        - image: 'registry.cn-hangzhou.aliyuncs.com/jzl/imagedesign:develop'
           args:
             - '-env=dev'
           imagePullPolicy: Always

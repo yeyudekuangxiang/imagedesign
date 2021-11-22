@@ -47,9 +47,9 @@ package:
   dependencies:
     - build
   script:
-    - docker build -t registry.cn-hangzhou.aliyuncs.com/branch/imagedesign:$CI_COMMIT_REF_NAME -f ./build/Dockerfile .
-    - docker login --username=jzl@laoyaojing --password=$DOCKER_PWD registry.cn-hangzhou.aliyuncs.com
-    - docker push registry.cn-hangzhou.aliyuncs.com/branch/imagedesign:$CI_COMMIT_REF_NAME
+    - docker build -t registry.cn-hangzhou.aliyuncs.com/jzl/imagedesign:$CI_COMMIT_REF_NAME -f ./build/Dockerfile .
+    - docker login --username=jzl--password=$DOCKER_PWD registry.cn-hangzhou.aliyuncs.com
+    - docker push registry.cn-hangzhou.aliyuncs.com/jzl/imagedesign:$CI_COMMIT_REF_NAME
 deploy:
   image:
     name: bitnami/kubectl:1.20.10

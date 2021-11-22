@@ -20,7 +20,7 @@ spec:
         app: imagedesign
     spec:
       containers:
-        - image: 'registry.cn-hangzhou.aliyuncs.com/branch/imagedesign:v1.0.0'
+        - image: 'registry.cn-hangzhou.aliyuncs.com/jzl/imagedesign:v1.0.0'
           env:
             - name: aliyun_logs_imagedesign-access
               value: /app/runtime/access*.log
