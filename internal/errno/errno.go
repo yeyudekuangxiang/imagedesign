@@ -2,7 +2,6 @@ package errno
 
 import (
 	"fmt"
-	"github.com/yeyudekuangxiang/imagedesign/core/app"
 )
 
 /*
@@ -96,7 +95,6 @@ func DecodeErr(err error) (int, string) {
 	}
 	switch typed := err.(type) {
 	case Err:
-		app.Logger.Error(fmt.Sprintf("%+v", err))
 		return typed.Code, typed.Message
 	case Errno:
 		return typed.Code, typed.Message

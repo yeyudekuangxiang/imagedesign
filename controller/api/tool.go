@@ -35,6 +35,13 @@ type Data struct {
 		W int `json:"w"`
 		H int `json:"h"`
 	} `json:"area"`
+	Border struct {
+		LT int `json:"lt"`
+		RT int `json:"rt"`
+		LB int `json:"lb"`
+		RB int `json:"rb"`
+	} `json:"border"`
+
 	MaxLineNum     int    `json:"maxLineNum"`
 	OutStr         string `json:"outStr"`
 	OutStrPosition string `json:"outStrPosition"`
@@ -74,6 +81,13 @@ func GetText(c *gin.Context) (gin.H, error) {
 	t.SetArea(text.Area.X, text.Area.Y, text.Area.W, text.Area.H)
 	t.SetTextAlign(text.TextAlign)
 	t.SetAutoLine(text.AutoLine)
+	switch text.Font {
+	case "siyuanheiti":
+		t.SetFont(imagedraw.SiYuanHeiYi())
+	case "siyuanheitibold":
+		t.SetFont(imagedraw.SiYuanHeiYiBold())
+	}
+
 	t.SetColor(color.RGBA{
 		R: uint8(text.Color.R),
 		G: uint8(text.Color.G),
@@ -86,7 +100,11 @@ func GetText(c *gin.Context) (gin.H, error) {
 	t.SetFontSize(text.FontSize)
 	t.SetLineHeight(text.LineHeight)
 	t.SetOverHidden(text.OverHidden)
-	result := t.Deal()
+	result, err := t.Deal()
+
+	if err != nil {
+		return nil, err
+	}
 
 	return gin.H{
 		"lineHeight": result.LineHeight,
@@ -96,18 +114,22 @@ func GetText(c *gin.Context) (gin.H, error) {
 	}, nil
 }
 func getCode(canvas Canvas, list []Data) string {
-	imageCode := ""
+	code := ""
 	for i, item := range list {
-		imageCode += getImageCode(item)
+		if item.Type == "text" {
+			code += getTextCode(item)
+		} else {
+			code += getImageCode(item)
+		}
 		if i != len(list)-1 {
-			imageCode += "\n\n"
+			code += "\n\n"
 		}
 	}
 	replacer := strings.NewReplacer(
 		"{{src}}", canvas.Src,
 		"{{width}}", strconv.Itoa(canvas.Width),
 		"{{height}}", strconv.Itoa(canvas.Height),
-		"{{imageCode}}", imageCode,
+		"{{imageCode}}", code,
 	)
 	if canvas.Src == "" {
 		return replacer.Replace(`package main
@@ -164,69 +186,83 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 func getImageCode(data Data) string {
-	if data.Type == "image" {
-		if data.Name == "" {
-			data.Name = fmt.Sprintf("image%d", rand.Int())
-		}
-		replace := strings.NewReplacer(
-			"{{image}}", data.Name,
-			"{{src}}", data.Src,
-			"{{width}}", strconv.Itoa(data.Area.W),
-			"{{height}}", strconv.Itoa(data.Area.H),
-			"{{startX}}", strconv.Itoa(data.Area.X),
-			"{{startY}}", strconv.Itoa(data.Area.Y),
-		)
-		if data.Shape == "cycle" {
-			return replace.Replace(`{{image}}, err := imagedraw.LoadImageFromUrl("{{src}}")
+	if data.Name == "" {
+		data.Name = fmt.Sprintf("image%d", rand.Int())
+	}
+
+	replace := strings.NewReplacer(
+		"{{image}}", data.Name,
+		"{{src}}", data.Src,
+		"{{width}}", strconv.Itoa(data.Area.W),
+		"{{height}}", strconv.Itoa(data.Area.H),
+		"{{startX}}", strconv.Itoa(data.Area.X),
+		"{{startY}}", strconv.Itoa(data.Area.Y),
+		"{{borderRadius}}", fmt.Sprintf("%d,%d,%d,%d", data.Border.LT, data.Border.RT, data.Border.RB, data.Border.LB),
+	)
+
+	code := `{{image}}, err := imagedraw.LoadImageFromUrl("{{src}}")
 			if err != nil {
 				return nil, err
 			}
 			{{image}} = {{image}}.Resize({{width}}, {{height}})
-			{{image}} = {{image}}.Ellipse({{image}}.Width()/2, {{image}}.Height()/2, {{image}}.Width()/2, {{image}}.Height()/2)
-			{{image}}.SetArea({{startX}}, {{startY}}, {{width}}, {{height}})
-			base.Fill({{image}})`)
-		} else {
-			return replace.Replace(`{{image}}, err := imagedraw.LoadImageFromUrl("{{src}}")
-			if err != nil {
-				return nil, err
-			}
-			{{image}} = {{image}}.Resize({{width}}, {{height}})
-			{{image}}.SetArea({{startX}}, {{startY}}, {{width}}, {{height}})
-			base.Fill({{image}})`)
-		}
+`
+	if data.Shape == "cycle" {
+		code += `{{image}} = {{image}}.Ellipse({{image}}.Width()/2, {{image}}.Height()/2, {{image}}.Width()/2, {{image}}.Height()/2)
+`
+	}
 
-	} else if data.Type == "text" {
-		if data.Name == "" {
-			data.Name = fmt.Sprintf("text%d", rand.Int())
-		}
+	if data.Border.LT != 0 || data.Border.RT != 0 || data.Border.RB != 0 || data.Border.LB != 0 {
 
-		code := ""
-		if strings.Contains(data.Content, "\n") {
-			code += `{{variable}} = imagedraw.NewLineText([]string{"` + strings.ReplaceAll(data.Content, "\n", "\",\"") + `"}, "\n"))`
-		} else {
-			code += `{{variable}} = imagedraw.NewText("{{text}}")`
-		}
-		replace := strings.NewReplacer(
-			"{{variable}}", data.Name,
-			"{{text}}", data.Content,
-			"{{startX}}", strconv.Itoa(data.Area.X),
-			"{{startY}}", strconv.Itoa(data.Area.Y),
-			"{{width}}", strconv.Itoa(data.Area.W),
-			"{{height}}", strconv.Itoa(data.Area.H),
-			"{{textAlign}}", data.TextAlign,
-			"{{autoLine}}", fmt.Sprintf("%v", data.AutoLine),
-			"{{R}}", strconv.Itoa(data.Color.R),
-			"{{G}}", strconv.Itoa(data.Color.G),
-			"{{B}}", strconv.Itoa(data.Color.B),
-			"{{A}}", strconv.Itoa(data.Color.A),
-			"{{outStrPosition}}", data.OutStrPosition,
-			"{{maxLineNum}}", strconv.Itoa(data.MaxLineNum),
-			"{{outStr}}", data.OutStr,
-			"{{fontSize}}", strconv.Itoa(data.FontSize),
-			"{{lineHeight}}", strconv.Itoa(data.LineHeight),
-			"{{overHidden}}", fmt.Sprintf("%v", data.OverHidden),
-		)
-		return replace.Replace(`var {{variable}} *imagedraw.Text
+		code += `{{image}} = {{image}}.BorderRadius({{borderRadius}})
+`
+	}
+
+	code += `{{image}}.SetArea({{startX}}, {{startY}}, {{width}}, {{height}})
+			base.Fill({{image}})
+`
+	return replace.Replace(code)
+}
+func getTextCode(data Data) string {
+	if data.Name == "" {
+		data.Name = fmt.Sprintf("text%d", rand.Int())
+	}
+
+	code := ""
+	if strings.Contains(data.Content, "\n") {
+		code += `{{variable}} = imagedraw.NewLineText([]string{"` + strings.ReplaceAll(data.Content, "\n", "\",\"") + `"}, "\n"))`
+	} else {
+		code += `{{variable}} = imagedraw.NewText("{{text}}")`
+	}
+
+	font := "imagedraw.SiYuanHeiYi()"
+	switch data.Font {
+	case "siyuanheiti":
+		font = "imagedraw.SiYuanHeiYi()"
+	case "siyuanheitibold":
+		font = "imagedraw.SiYuanHeiYiBold()"
+	}
+	replace := strings.NewReplacer(
+		"{{variable}}", data.Name,
+		"{{text}}", data.Content,
+		"{{startX}}", strconv.Itoa(data.Area.X),
+		"{{startY}}", strconv.Itoa(data.Area.Y),
+		"{{width}}", strconv.Itoa(data.Area.W),
+		"{{height}}", strconv.Itoa(data.Area.H),
+		"{{textAlign}}", data.TextAlign,
+		"{{autoLine}}", fmt.Sprintf("%v", data.AutoLine),
+		"{{R}}", strconv.Itoa(data.Color.R),
+		"{{G}}", strconv.Itoa(data.Color.G),
+		"{{B}}", strconv.Itoa(data.Color.B),
+		"{{A}}", strconv.Itoa(data.Color.A),
+		"{{outStrPosition}}", data.OutStrPosition,
+		"{{maxLineNum}}", strconv.Itoa(data.MaxLineNum),
+		"{{outStr}}", data.OutStr,
+		"{{fontSize}}", strconv.Itoa(data.FontSize),
+		"{{lineHeight}}", strconv.Itoa(data.LineHeight),
+		"{{overHidden}}", fmt.Sprintf("%v", data.OverHidden),
+		"{{font}}", font,
+	)
+	return replace.Replace(`var {{variable}} *imagedraw.Text
 	` + code + `
 	{{variable}}.SetArea({{startX}}, {{startY}}, {{width}}, {{height}})
 	{{variable}}.SetTextAlign("{{textAlign}}")
@@ -238,8 +274,6 @@ func getImageCode(data Data) string {
 	{{variable}}.SetFontSize({{fontSize}})
 	{{variable}}.SetLineHeight({{lineHeight}})
 	{{variable}}.SetOverHidden({{overHidden}})
+	{{variable}}.SetFont({{font}})
 	base.Fill({{variable}})`)
-	}
-	return ""
-
 }

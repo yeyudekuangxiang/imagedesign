@@ -14,9 +14,9 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.6.1
 	github.com/ulule/limiter/v3 v3.8.0
-	github.com/yeyudekuangxiang/imagedraw v1.0.9
+	github.com/yeyudekuangxiang/imagedraw v1.1.0
 	go.uber.org/zap v1.16.0
-	golang.org/x/image v0.0.0-20211028202545-6944b10bf410 // indirect
+	golang.org/x/image v0.1.0 // indirect
 	gopkg.in/ini.v1 v1.62.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gorm.io/driver/mysql v1.0.5

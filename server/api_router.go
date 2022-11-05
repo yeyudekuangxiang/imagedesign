@@ -9,10 +9,4 @@ func apiRouter(router *gin.Engine) {
 	router.Static("/web", "./web")
 	router.POST("api/text", format(api.GetText))
 	router.POST("api/code", format(api.GetCode))
-	apiRouter := router.Group("/api")
-	apiRouter.Use(throttle())
-	apiRouter.Use(mustAuth())
-	{
-		apiRouter.GET("/user", format(api.DefaultUserController.GetUserInfo))
-	}
 }

@@ -12,11 +12,6 @@
             border: none;
         }
 
-        @font-face {
-            font-family: myFirstFont;
-            src: url(https://cdn.laoyaojing.net/standard/resource/siyuanheiti.ttf),
-        }
-
         #app {
             width: 100%;
             height: 100%;
@@ -149,6 +144,16 @@
         <el-form ref=form label-width=120px>
             <el-form-item label="文本内容">
                 <el-input v-model="textControl.content" @blur="deal" placeholder="请输入内容 自定义分行请用隔开"></el-input>
+            </el-form-item>
+            <el-form-item label="字体">
+                <el-select v-model="textControl.font"  @change="deal" placeholder="字体" style="width: 100%">
+                    <el-option
+                            v-for="(item,i) in fontOptions"
+                            :key="i"
+                            :label="item.label"
+                            :value="item.value">
+                    </el-option>
+                </el-select>
             </el-form-item>
             <el-form-item label="字体大小(px)">
                 <el-input placeholder="请输入字体大小" type="number" @blur="deal" min=1 v-model.number="textControl.fontSize">
@@ -343,6 +348,45 @@
                 </div>
 
             </el-form-item>
+
+            <el-form-item label="圆角">
+                <div style="display: flex;flex-direction: row">
+                    <el-input
+                            @blur="deal"
+                            v-model.number="textControl.border.lt"
+                            min=0
+                    >
+                        <template slot=prepend>左上</template>
+                    </el-input>
+                    <el-input
+                            @blur="deal"
+                            v-model.number="textControl.border.rt"
+                            min=0
+                    >
+                        <template slot=prepend>右上</template>
+                    </el-input>
+                </div>
+
+            </el-form-item>
+            <el-form-item >
+                <div style="display: flex;flex-direction: row">
+                    <el-input
+                            @blur="deal"
+                            v-model.number="textControl.border.lb"
+                            min=0
+                    >
+                        <template slot=prepend>左下</template>
+                    </el-input>
+                    <el-input
+                            @blur="deal"
+                            v-model.number="textControl.border.rb"
+                            min=0
+                    >
+                        <template slot=prepend>右下</template>
+                    </el-input>
+                </div>
+
+            </el-form-item>
             <el-form-item label="类型">
                 <el-select v-model="textControl.shape" @change="deal" placeholder="请选择类型" style="width: 100%">
                     <el-option
@@ -380,6 +424,16 @@
                 {
                     value: "cycle",
                     label: "圆形"
+                },
+            ],
+            fontOptions: [
+                {
+                    value: "siyuanheiti",
+                    label: "正常"
+                },
+                {
+                    value: "siyuanheitibold",
+                    label: "加粗"
                 },
             ],
             autoLineOptions: [
@@ -507,7 +561,7 @@
                     maxLineNum: 5,
                     outStr: "...",
                     outStrPosition: "right",
-                    font: "",
+                    font: "siyuanheiti",
                     lineHeight: 30,
                     color: {r: 0, g: 0, b: 0, a: 255},
                     autoLine: true,
@@ -540,6 +594,12 @@
                         y: 0,
                         w: 100,
                         h: 100
+                    },
+                    border: {
+                        lt: 0,
+                        rt: 0,
+                        rb: 0,
+                        lb: 0
                     },
                 }
                 document.getElementById("content").appendChild(ele)
@@ -816,6 +876,16 @@
                         case "src":
                             document.getElementById(id).src = data[k]
                             break;
+                        case "font":
+                            switch (data[k]){
+                                case "siyuanheiti":
+                                    document.getElementById(id).style.fontFamily = "SimHei"
+                                    break
+                                case "siyuanheitibold":
+                                    document.getElementById(id).style.fontFamily = "SimHei"
+                                    document.getElementById(id).style.fontWeight = "bold"
+                                    break
+                            }
                         case "shape":
                             if (data['type'] === "text") {
                                 continue
@@ -825,6 +895,16 @@
                             } else if (data[k] === "square") {
                                 document.getElementById(id).style.borderRadius = "0"
                             }
+                            break
+                        case "border":
+                            if (data['type'] === "text") {
+                                continue
+                            }
+                            document.getElementById(id).style.borderTopLeftRadius = data["border"].lt +"px"
+                            document.getElementById(id).style.borderTopRightRadius = data["border"].rt +"px"
+                            document.getElementById(id).style.borderBottomRightRadius = data["border"].rb +"px"
+                            document.getElementById(id).style.borderBottomLeftRadius = data["border"].lb +"px"
+                            break
                     }
                 }
             },
@@ -838,7 +918,6 @@
                         let div = document.createElement("div")
                         div.innerText = text.Str
                         div.style.lineHeight = result.lineHeight + "px"
-                        div.style.fontFamily = "myFirstFont"
                         document.getElementById(id).appendChild(div)
                     })
                 }))
