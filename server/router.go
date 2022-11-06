@@ -27,9 +27,6 @@ func Router(router *gin.Engine) {
 	router.GET("/ping", func(context *gin.Context) {
 		context.String(200, "pong")
 	})
-	router.GET("/", func(context *gin.Context) {
-		context.String(200, "imagedesign")
-	})
 
 	apiRouter(router)
 }
