@@ -11,7 +11,14 @@
             height: 100%;
             border: none;
         }
-
+        @font-face {
+            font-family: siyuanheiti;
+            src: url("/web/syht.ttf") format('truetype');
+        }
+        @font-face {
+            font-family: siyuanheitibold;
+            src: url("/web/syhtbold.otf") format('opentype');
+        }
         #app {
             width: 100%;
             height: 100%;
@@ -152,6 +159,16 @@
                             :key="i"
                             :label="item.label"
                             :value="item.value">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="加粗">
+                <el-select v-model="textControl.bold"  @change="deal" placeholder="加粗" style="width: 100%">
+                    <el-option
+                            v-for="(item,i) in boldOptions"
+                            :key="i"
+                            :label="item.label"
+                            :value=item.value>
                     </el-option>
                 </el-select>
             </el-form-item>
@@ -429,12 +446,18 @@
             fontOptions: [
                 {
                     value: "siyuanheiti",
+                    label: "思源黑体"
+                }
+            ],
+            boldOptions: [
+                {
+                    value: false,
                     label: "正常"
                 },
                 {
-                    value: "siyuanheitibold",
-                    label: "加粗"
-                },
+                    value: true,
+                    label: "粗体"
+                }
             ],
             autoLineOptions: [
                 {
@@ -563,6 +586,7 @@
                     outStr: "...",
                     outStrPosition: "right",
                     font: "siyuanheiti",
+                    bold:false,
                     lineHeight: 30,
                     color: {r: 0, g: 0, b: 0, a: 255},
                     autoLine: true,
@@ -880,12 +904,13 @@
                         case "font":
                             switch (data[k]){
                                 case "siyuanheiti":
-                                    document.getElementById(id).style.fontFamily = "SimHei"
-                                    document.getElementById(id).style.fontWeight = ""
-                                    break
-                                case "siyuanheitibold":
-                                    document.getElementById(id).style.fontFamily = "SimHei"
-                                    document.getElementById(id).style.fontWeight = "bold"
+                                    if (data["bold"]){
+                                        document.getElementById(id).style.fontFamily = "siyuanheitibold"
+                                        document.getElementById(id).style.fontWeight = ""
+                                    }else{
+                                        document.getElementById(id).style.fontFamily = "siyuanheiti"
+                                        document.getElementById(id).style.fontWeight = ""
+                                    }
                                     break
                             }
                         case "shape":

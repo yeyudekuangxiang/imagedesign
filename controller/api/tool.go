@@ -46,6 +46,7 @@ type Data struct {
 	OutStr         string `json:"outStr"`
 	OutStrPosition string `json:"outStrPosition"`
 	Font           string `json:"font"`
+	Bold           bool   `json:"bold"`
 	LineHeight     int    `json:"lineHeight"`
 	Color          struct {
 		R int `json:"r"`
@@ -83,9 +84,11 @@ func GetText(c *gin.Context) (gin.H, error) {
 	t.SetAutoLine(text.AutoLine)
 	switch text.Font {
 	case "siyuanheiti":
-		t.SetFont(imagedraw.SiYuanHeiYi())
-	case "siyuanheitibold":
-		t.SetFont(imagedraw.SiYuanHeiYiBold())
+		if text.Bold {
+			t.SetFont(imagedraw.SiYuanHeiYiBold())
+		} else {
+			t.SetFont(imagedraw.SiYuanHeiYi())
+		}
 	}
 
 	t.SetColor(color.RGBA{
@@ -100,7 +103,7 @@ func GetText(c *gin.Context) (gin.H, error) {
 	t.SetFontSize(text.FontSize)
 	t.SetLineHeight(text.LineHeight)
 	t.SetOverHidden(text.OverHidden)
-	result, err := t.Deal()
+	result, err := t.Calc()
 
 	if err != nil {
 		return nil, err
@@ -237,9 +240,11 @@ func getTextCode(data Data) string {
 	font := "imagedraw.SiYuanHeiYi()"
 	switch data.Font {
 	case "siyuanheiti":
-		font = "imagedraw.SiYuanHeiYi()"
-	case "siyuanheitibold":
-		font = "imagedraw.SiYuanHeiYiBold()"
+		if data.Bold {
+			font = "imagedraw.SiYuanHeiYiBold()"
+		} else {
+			font = "imagedraw.SiYuanHeiYi()"
+		}
 	}
 	replace := strings.NewReplacer(
 		"{{variable}}", data.Name,
