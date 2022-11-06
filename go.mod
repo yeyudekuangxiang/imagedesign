@@ -12,7 +12,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/smartystreets/goconvey v0.0.0-20190330032615-68dc04aab96a // indirect
 	github.com/ulule/limiter/v3 v3.8.0
-	github.com/yeyudekuangxiang/imagedraw v1.2.1
+	github.com/yeyudekuangxiang/imagedraw v1.2.2
 	golang.org/x/image v0.1.0 // indirect
 	gopkg.in/ini.v1 v1.62.0
 )
