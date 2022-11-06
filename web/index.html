@@ -541,6 +541,7 @@
                 let ele = document.createElement("div")
                 ele.id = id
                 ele.className = "text "
+                ele.style.whiteSpace = "nowrap"
                 ele.onmousedown = function (e) {
                     that.mousedown.call(that, e, id)
                 }

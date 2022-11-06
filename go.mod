@@ -2,6 +2,9 @@ module github.com/yeyudekuangxiang/imagedesign
 
 go 1.15
 
+replace (
+	github.com/yeyudekuangxiang/imagedraw v1.1.0 => ../imagedraw
+)
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-contrib/cors v1.3.1
