@@ -10,6 +10,7 @@
             width: 100%;
             height: 100%;
             border: none;
+            background: #808080;
         }
         @font-face {
             font-family: siyuanheiti;
@@ -24,16 +25,21 @@
             height: 100%;
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: row;
         }
 
         .draw {
-            width: 100%;
-            height: 100%;
+            flex-grow: 1;
             overflow: auto;
             display: flex;
             flex-direction: row;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
+        }
+        #canvas{
+            background: white;
+            flex-shrink: 0;
         }
 
         .text {
@@ -42,16 +48,21 @@
             position: absolute;
         }
 
-        .tool {
-            position: absolute;
+        .control {
+            width: 350px;
+            flex-shrink: 0;
             display: flex;
             flex-direction: column;
             align-items: baseline;
             justify-content: right;
-            right: 0;
-            top: 0;
-            width: 350px;
-            height: 100%;
+            background: white;
+        }
+        .tool {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: baseline;
+            justify-content: right;
         }
 
         .create-canvas {
@@ -63,11 +74,6 @@
 
         .text-control {
             background-color: white;
-            position: absolute;
-            right: 0;
-            top: 0;
-            width: 350px;
-            height: 100%;
         }
 
         .text-control .el-form-item {
@@ -81,13 +87,14 @@
             display: none
         }
     </style>
-    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="/web/index.css">
 </head>
 <body>
 <div id="app" v-cloak>
+    <input type="file" style="display: none"  id="file" @change="chooseFile"/>
     <div class="draw" id="draw">
         <div v-show="showCanvas" class="canvas" id="canvas"
-             style="position: relative;user-select: none;border: 4px black solid">
+             style="position: relative;user-select: none;">
             <div class="help">
                 <div v-show="editing!==''" style="height: 1px;background-color: black;position: absolute;z-index: 1000;"
                      id="line1"></div>
@@ -113,7 +120,7 @@
         </div>
     </div>
     <div class="create-canvas">
-        <el-button v-if="!showCanvas" @click="dialogFormVisible = true">创建画布</el-button>
+        <el-button  @click="dialogFormVisible = true">创建画布</el-button>
         <el-dialog title="创建画布" :visible.sync="dialogFormVisible">
             <el-form>
                 <el-form-item label="画布宽度" label-width="90px">
@@ -123,7 +130,8 @@
                     <el-input v-model.number="canvas.height" autocomplete="off"></el-input>
                 </el-form-item>
                 <el-form-item label="画布背景图" label-width="90px">
-                    <el-input v-model.number="canvas.src" autocomplete="off"></el-input>
+                    <el-input v-model="canvas.src" placeholder="请输入链接" autocomplete="off"></el-input>
+                    <el-button type="primary" @click="startChoose('this.canvas.src')">本地选择<i class="el-icon-upload el-icon--right"></i></el-button>
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
@@ -132,299 +140,302 @@
             </div>
         </el-dialog>
     </div>
-    <div class="tool" v-show="editing==='' && showCanvas" style="background-color: white">
-        <div style="display: flex;flex-direction: row;">
-            <el-button @click="addText">文本</el-button>
-            <el-button @click="addImage">图片</el-button>
-            <el-button @click="showCode">代码</el-button>
+    <div class="control" v-show="showCanvas">
+        <div class="tool" v-show="editing==='' && showCanvas">
+            <div style="display: flex;flex-direction: row;">
+                <el-button @click="addText">文本</el-button>
+                <el-button @click="addImage">图片</el-button>
+                <el-button @click="showCode">代码</el-button>
+            </div>
+            <div v-show="showCodeVal" style="flex-grow: 1;width: 100%">
+                <el-input
+                        type="textarea"
+                        :rows="50"
+                        placeholder="请输入内容"
+                        v-model="code">
+                </el-input>
+            </div>
         </div>
-        <div v-show="showCodeVal" style="flex-grow: 1;width: 100%">
-            <el-input
-                    type="textarea"
-                    :rows="50"
-                    placeholder="请输入内容"
-                    v-model="code">
-            </el-input>
+        <div id="text-control" v-if="showControl('text')" class="text-control">
+            <el-form ref=form label-width=120px>
+                <el-form-item label="文本内容">
+                    <el-input v-model="textControl.content" @blur="deal" placeholder="请输入内容 自定义分行请用隔开"></el-input>
+                </el-form-item>
+                <el-form-item label="字体">
+                    <el-select v-model="textControl.font"  @change="deal" placeholder="字体" style="width: 100%">
+                        <el-option
+                                v-for="(item,i) in fontOptions"
+                                :key="i"
+                                :label="item.label"
+                                :value="item.value">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="加粗">
+                    <el-select v-model="textControl.bold"  @change="deal" placeholder="加粗" style="width: 100%">
+                        <el-option
+                                v-for="(item,i) in boldOptions"
+                                :key="i"
+                                :label="item.label"
+                                :value=item.value>
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="字体大小(px)">
+                    <el-input placeholder="请输入字体大小" type="number" @blur="deal" min=1 v-model.number="textControl.fontSize">
+                    </el-input>
+                </el-form-item>
+                <el-form-item label="行高">
+                    <el-input placeholder="请输入行高" type="number" @blur="deal" min=1 v-model.number="textControl.lineHeight">
+                    </el-input>
+                </el-form-item>
+                <el-form-item label="最大行数">
+                    <el-input placeholder="请输入最大行数" @blur="deal" type="number" min=1 v-model.number="textControl.maxLineNum">
+                    </el-input>
+                </el-form-item>
+                <el-form-item label="省略符">
+                    <el-input placeholder="请输入超出省略符"  @blur="deal" v-model="textControl.outStr">
+                    </el-input>
+                </el-form-item>
+                <el-form-item label="超出略位置">
+                    <el-select v-model="textControl.outStrPosition"  @change="deal" placeholder="请选择超出略位置" style="width: 100%">
+                        <el-option
+                                v-for="(item,i) in outStrPositionOptions"
+                                :key="i"
+                                :label="item.label"
+                                :value="item.value">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+
+                <el-form-item label="是否自动分行">
+                    <el-select v-model="textControl.autoLine"  @change="deal" placeholder="请选择是否自动分行" style="width: 100%">
+                        <el-option
+                                v-for="(item,i) in autoLineOptions"
+                                :key="i"
+                                :label="item.label"
+                                :value="item.value">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="行超出是否隐藏">
+                    <el-select v-model="textControl.overHidden"  @change="deal" placeholder="请选择行超出区域是否隐藏" style="width: 100%">
+                        <el-option
+                                v-for="(item,i) in overHiddenOptions"
+                                :key="i"
+                                :label="item.label"
+                                :value="item.value">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="文字颜色(rgba)">
+                    <div style="display: flex;flex-direction: row">
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.color.r"
+                                max=255
+                                min=0
+                        >
+                            <template slot=prepend>R</template>
+                        </el-input>
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.color.g"
+                                max=255
+                                min=0
+                        >
+                            <template slot=prepend>G</template>
+                        </el-input>
+                    </div>
+                </el-form-item>
+                <el-form-item>
+                    <div style="display: flex;flex-direction: row">
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.color.b"
+                                max=255
+                                min=0
+                        >
+                            <template slot=prepend>B</template>
+                        </el-input>
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.color.a"
+                                max=255
+                                min=0
+                        >
+                            <template slot=prepend>A</template>
+                        </el-input>
+                    </div>
+                </el-form-item>
+                <el-form-item label="起始位置">
+                    <div style="display: flex;flex-direction: row">
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.area.x"
+                                max=255
+                                min=0
+                        >
+                            <template slot=prepend>X</template>
+                        </el-input>
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.area.y"
+                                max=255
+                                min=0
+                        >
+                            <template slot=prepend>Y</template>
+                        </el-input>
+                    </div>
+                </el-form-item>
+
+                <el-form-item label="宽高">
+                    <div style="display: flex;flex-direction: row">
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.area.w"
+                                max=255
+                                min=0
+                        >
+                            <template slot=prepend>W</template>
+                        </el-input>
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.area.h"
+                                max=255
+                                min=0
+                        >
+                            <template slot=prepend>H</template>
+                        </el-input>
+                    </div>
+
+                </el-form-item>
+                <el-form-item label="对齐方式">
+                    <el-select v-model="textControl.textAlign"  @change="deal" placeholder="请选择对齐方式" style="width: 100%">
+                        <el-option
+                                v-for="(item,i) in textAlignOptions"
+                                :key="i"
+                                :label="item.label"
+                                :value="item.value">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item>
+                    <el-button @click="endEdit">确定</el-button>
+                    <el-button type="danger" @click="delEle">删除</el-button>
+                </el-form-item>
+            </el-form>
         </div>
-    </div>
-    <div id="text-control" v-if="showControl('text')" class="text-control">
-        <el-form ref=form label-width=120px>
-            <el-form-item label="文本内容">
-                <el-input v-model="textControl.content" @blur="deal" placeholder="请输入内容 自定义分行请用隔开"></el-input>
-            </el-form-item>
-            <el-form-item label="字体">
-                <el-select v-model="textControl.font"  @change="deal" placeholder="字体" style="width: 100%">
-                    <el-option
-                            v-for="(item,i) in fontOptions"
-                            :key="i"
-                            :label="item.label"
-                            :value="item.value">
-                    </el-option>
-                </el-select>
-            </el-form-item>
-            <el-form-item label="加粗">
-                <el-select v-model="textControl.bold"  @change="deal" placeholder="加粗" style="width: 100%">
-                    <el-option
-                            v-for="(item,i) in boldOptions"
-                            :key="i"
-                            :label="item.label"
-                            :value=item.value>
-                    </el-option>
-                </el-select>
-            </el-form-item>
-            <el-form-item label="字体大小(px)">
-                <el-input placeholder="请输入字体大小" type="number" @blur="deal" min=1 v-model.number="textControl.fontSize">
-                </el-input>
-            </el-form-item>
-            <el-form-item label="行高">
-                <el-input placeholder="请输入行高" type="number" @blur="deal" min=1 v-model.number="textControl.lineHeight">
-                </el-input>
-            </el-form-item>
-            <el-form-item label="最大行数">
-                <el-input placeholder="请输入最大行数" @blur="deal" type="number" min=1 v-model.number="textControl.maxLineNum">
-                </el-input>
-            </el-form-item>
-            <el-form-item label="省略符">
-                <el-input placeholder="请输入超出省略符"  @blur="deal" v-model="textControl.outStr">
-                </el-input>
-            </el-form-item>
-            <el-form-item label="超出略位置">
-                <el-select v-model="textControl.outStrPosition"  @change="deal" placeholder="请选择超出略位置" style="width: 100%">
-                    <el-option
-                            v-for="(item,i) in outStrPositionOptions"
-                            :key="i"
-                            :label="item.label"
-                            :value="item.value">
-                    </el-option>
-                </el-select>
-            </el-form-item>
+        <div id="image-control" v-if="showControl('image')" class="text-control">
+            <el-form ref=form label-width=120px>
+                <el-form-item label="图片地址">
+                    <el-input v-model="textControl.src" @blur="deal"  placeholder="请输入图片地址"></el-input>
+                    <el-button type="primary" @click="startChoose('this.textControl.src','this.deal()')">本地选择<i class="el-icon-upload el-icon--right"></i></el-button>
+                </el-form-item>
 
-            <el-form-item label="是否自动分行">
-                <el-select v-model="textControl.autoLine"  @change="deal" placeholder="请选择是否自动分行" style="width: 100%">
-                    <el-option
-                            v-for="(item,i) in autoLineOptions"
-                            :key="i"
-                            :label="item.label"
-                            :value="item.value">
-                    </el-option>
-                </el-select>
-            </el-form-item>
-            <el-form-item label="行超出是否隐藏">
-                <el-select v-model="textControl.overHidden"  @change="deal" placeholder="请选择行超出区域是否隐藏" style="width: 100%">
-                    <el-option
-                            v-for="(item,i) in overHiddenOptions"
-                            :key="i"
-                            :label="item.label"
-                            :value="item.value">
-                    </el-option>
-                </el-select>
-            </el-form-item>
-            <el-form-item label="文字颜色(rgba)">
-                <div style="display: flex;flex-direction: row">
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.color.r"
-                            max=255
-                            min=0
-                    >
-                        <template slot=prepend>R</template>
-                    </el-input>
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.color.g"
-                            max=255
-                            min=0
-                    >
-                        <template slot=prepend>G</template>
-                    </el-input>
-                </div>
-            </el-form-item>
-            <el-form-item>
-                <div style="display: flex;flex-direction: row">
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.color.b"
-                            max=255
-                            min=0
-                    >
-                        <template slot=prepend>B</template>
-                    </el-input>
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.color.a"
-                            max=255
-                            min=0
-                    >
-                        <template slot=prepend>A</template>
-                    </el-input>
-                </div>
-            </el-form-item>
-            <el-form-item label="起始位置">
-                <div style="display: flex;flex-direction: row">
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.area.x"
-                            max=255
-                            min=0
-                    >
-                        <template slot=prepend>X</template>
-                    </el-input>
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.area.y"
-                            max=255
-                            min=0
-                    >
-                        <template slot=prepend>Y</template>
-                    </el-input>
-                </div>
-            </el-form-item>
+                <el-form-item label="起始位置">
+                    <div style="display: flex;flex-direction: row">
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.area.x"
+                                max=255
+                                min=0
+                        >
+                            <template slot=prepend>X</template>
+                        </el-input>
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.area.y"
+                                max=255
+                                min=0
+                        >
+                            <template slot=prepend>Y</template>
+                        </el-input>
+                    </div>
+                </el-form-item>
 
-            <el-form-item label="宽高">
-                <div style="display: flex;flex-direction: row">
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.area.w"
-                            max=255
-                            min=0
-                    >
-                        <template slot=prepend>W</template>
-                    </el-input>
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.area.h"
-                            max=255
-                            min=0
-                    >
-                        <template slot=prepend>H</template>
-                    </el-input>
-                </div>
+                <el-form-item label="宽高">
+                    <div style="display: flex;flex-direction: row">
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.area.w"
+                                max=255
+                                min=0
+                        >
+                            <template slot=prepend>W</template>
+                        </el-input>
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.area.h"
+                                max=255
+                                min=0
+                        >
+                            <template slot=prepend>H</template>
+                        </el-input>
+                    </div>
 
-            </el-form-item>
-            <el-form-item label="对齐方式">
-                <el-select v-model="textControl.textAlign"  @change="deal" placeholder="请选择对齐方式" style="width: 100%">
-                    <el-option
-                            v-for="(item,i) in textAlignOptions"
-                            :key="i"
-                            :label="item.label"
-                            :value="item.value">
-                    </el-option>
-                </el-select>
-            </el-form-item>
-            <el-form-item>
-                <el-button @click="endEdit">确定</el-button>
-                <el-button type="danger" @click="delEle">删除</el-button>
-            </el-form-item>
-        </el-form>
-    </div>
-    <div id="image-control" v-if="showControl('image')" class="text-control">
-        <el-form ref=form label-width=120px>
-            <el-form-item label="图片地址">
-                <el-input v-model="textControl.src" @blur="deal"  placeholder="请输入图片地址"></el-input>
-            </el-form-item>
+                </el-form-item>
 
-            <el-form-item label="起始位置">
-                <div style="display: flex;flex-direction: row">
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.area.x"
-                            max=255
-                            min=0
-                    >
-                        <template slot=prepend>X</template>
-                    </el-input>
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.area.y"
-                            max=255
-                            min=0
-                    >
-                        <template slot=prepend>Y</template>
-                    </el-input>
-                </div>
-            </el-form-item>
+                <el-form-item label="圆角">
+                    <div style="display: flex;flex-direction: row">
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.border.lt"
+                                min=0
+                        >
+                            <template slot=prepend>左上</template>
+                        </el-input>
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.border.rt"
+                                min=0
+                        >
+                            <template slot=prepend>右上</template>
+                        </el-input>
+                    </div>
 
-            <el-form-item label="宽高">
-                <div style="display: flex;flex-direction: row">
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.area.w"
-                            max=255
-                            min=0
-                    >
-                        <template slot=prepend>W</template>
-                    </el-input>
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.area.h"
-                            max=255
-                            min=0
-                    >
-                        <template slot=prepend>H</template>
-                    </el-input>
-                </div>
+                </el-form-item>
+                <el-form-item >
+                    <div style="display: flex;flex-direction: row">
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.border.lb"
+                                min=0
+                        >
+                            <template slot=prepend>左下</template>
+                        </el-input>
+                        <el-input
+                                @blur="deal"
+                                v-model.number="textControl.border.rb"
+                                min=0
+                        >
+                            <template slot=prepend>右下</template>
+                        </el-input>
+                    </div>
 
-            </el-form-item>
-
-            <el-form-item label="圆角">
-                <div style="display: flex;flex-direction: row">
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.border.lt"
-                            min=0
-                    >
-                        <template slot=prepend>左上</template>
-                    </el-input>
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.border.rt"
-                            min=0
-                    >
-                        <template slot=prepend>右上</template>
-                    </el-input>
-                </div>
-
-            </el-form-item>
-            <el-form-item >
-                <div style="display: flex;flex-direction: row">
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.border.lb"
-                            min=0
-                    >
-                        <template slot=prepend>左下</template>
-                    </el-input>
-                    <el-input
-                            @blur="deal"
-                            v-model.number="textControl.border.rb"
-                            min=0
-                    >
-                        <template slot=prepend>右下</template>
-                    </el-input>
-                </div>
-
-            </el-form-item>
-            <el-form-item label="类型">
-                <el-select v-model="textControl.shape" @change="deal" placeholder="请选择类型" style="width: 100%">
-                    <el-option
-                            v-for="(item,i) in imageOptions"
-                            :key="i"
-                            :label="item.label"
-                            :value="item.value">
-                    </el-option>
-                </el-select>
-            </el-form-item>
-            <el-form-item>
-                <el-button @click="endEdit">确定</el-button>
-                <el-button type="danger" @click="delEle">删除</el-button>
-            </el-form-item>
-        </el-form>
+                </el-form-item>
+                <el-form-item label="类型">
+                    <el-select v-model="textControl.shape" @change="deal" placeholder="请选择类型" style="width: 100%">
+                        <el-option
+                                v-for="(item,i) in imageOptions"
+                                :key="i"
+                                :label="item.label"
+                                :value="item.value">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item>
+                    <el-button @click="endEdit">确定</el-button>
+                    <el-button type="danger" @click="delEle">删除</el-button>
+                </el-form-item>
+            </el-form>
+        </div>
     </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
-<script src="https://unpkg.com/element-ui/lib/index.js"></script>
-<script src="https://cdn.bootcdn.net/ajax/libs/axios/0.21.1/axios.min.js"></script>
-<script src="https://cdn.bootcss.com/qs/6.7.0/qs.min.js"></script>
+<script src="/web/vue.js"></script>
+<script src="/web/index.js"></script>
+<script src="/web/axios.min.js"></script>
+<script src="/web/qs.min.js"></script>
 <script>
     const qs = Qs
     new Vue({
@@ -440,7 +451,7 @@
                 },
                 {
                     value: "cycle",
-                    label: "圆形"
+                    label: "圆形(圆角属性将失效)"
                 },
             ],
             fontOptions: [
@@ -509,11 +520,28 @@
                 height: 500,
                 src: "",
             },
+            fileObj:"this.canvas.src",
+            fileHook:"",
             editing: "",
             object: {},
             textControl: null,
         },
         methods: {
+            startChoose:function (ele,f){
+                this.fileObj = ele
+                this.fileHook = f
+                document.getElementById("file").click()
+            },
+            chooseFile:function (ele,f){
+                if (ele.target.files.length>0){
+                    eval(this.fileObj+"='"+window.URL.createObjectURL(ele.target.files[0])+"'")
+                    if (this.fileHook!==""){
+                        eval(this.fileHook)
+                        this.fileHook = ""
+                        this.fileObj = ""
+                    }
+                }
+            },
             createCanvas: function () {
                 document.getElementById("canvas").style.height = this.canvas.height + "px"
                 document.getElementById("canvas").style.width = this.canvas.width + "px"
@@ -521,8 +549,15 @@
                     document.getElementById("canvas").style.background = "url(" + this.canvas.src + ") 100% 100%"
                 }
                 document.getElementById("content").innerHTML = ""
+                this.object = {}
+                this.textControl = null
+                this.editing = ""
                 this.showCanvas = true
                 this.dialogFormVisible = false
+                this.fileObj =""
+                this.fileHook=""
+                this.code=""
+                this.showCodeVal =false
             },
             showCode:function (){
                 this.showCodeVal = !this.showCodeVal
@@ -653,6 +688,7 @@
                 });
             },
             deal: function () {
+                console.log("deal")
                 this.updateLineInfo()
                 if (this.editing && this.object[this.editing]['type'] === 'text') {
                     this.showText()
@@ -881,6 +917,7 @@
                 document.getElementById("area").style.top = (data.area.h + data.area.y - 20) + "px"
 
                 for (let k in data) {
+                    console.log(k,data[k])
                     switch (k) {
                         case "color":
                             let a = data[k].a / 255
@@ -913,6 +950,7 @@
                                     }
                                     break
                             }
+                            break
                         case "shape":
                             if (data['type'] === "text") {
                                 continue
@@ -925,6 +963,13 @@
                             break
                         case "border":
                             if (data['type'] === "text") {
+                                continue
+                            }
+                            if (data['shape']==="cycle"){
+                                data["border"].lt = 0
+                                data["border"].rt = 0
+                                data["border"].rb = 0
+                                data["border"].lb = 0
                                 continue
                             }
                             document.getElementById(id).style.borderTopLeftRadius = data["border"].lt +"px"
