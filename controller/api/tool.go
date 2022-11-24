@@ -214,7 +214,7 @@ func getImageCode(data Data) string {
 `
 	}
 
-	if data.Border.LT != 0 || data.Border.RT != 0 || data.Border.RB != 0 || data.Border.LB != 0 {
+	if (data.Border.LT != 0 || data.Border.RT != 0 || data.Border.RB != 0 || data.Border.LB != 0) && data.Shape != "cycle" {
 
 		code += `{{image}} = {{image}}.BorderRadius({{borderRadius}})
 `
