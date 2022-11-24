@@ -546,7 +546,9 @@
                 document.getElementById("canvas").style.height = this.canvas.height + "px"
                 document.getElementById("canvas").style.width = this.canvas.width + "px"
                 if (this.canvas.src) {
-                    document.getElementById("canvas").style.background = "url(" + this.canvas.src + ") 100% 100%"
+                    document.getElementById("canvas").style.background = "url(" + this.canvas.src + ")"
+                    document.getElementById("canvas").style.backgroundSize = this.canvas.width+"px"+" "+this.canvas.height + "px"
+                    document.getElementById("canvas").style.backgroundRepeat = "no-repeat"
                 }
                 document.getElementById("content").innerHTML = ""
                 this.object = {}
